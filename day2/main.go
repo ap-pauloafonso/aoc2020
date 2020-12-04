@@ -21,6 +21,21 @@ type inputParsed struct {
 	text       string
 }
 
+func procesParse(line string) inputParsed {
+	splits := strings.Split(line, " ")
+	minmax := strings.Split(splits[0], "-")
+	min, _ := strconv.Atoi(minmax[0])
+	max, _ := strconv.Atoi(minmax[1])
+	charactere := []rune(splits[1])[0]
+	text := splits[2]
+	return inputParsed{min: min, max: max, charactere: charactere, text: text}
+}
+
+func workerParse(in <-chan string, out chan<- inputParsed) {
+	for v := range in {
+		out <- procesParse(v)
+	}
+}
 func parse() (parsedCh <-chan inputParsed, WaitGroup *sync.WaitGroup) {
 	dat, _ := ioutil.ReadFile("input.txt")
 	lines := strings.Split(string(dat), "\n")
@@ -30,11 +45,9 @@ func parse() (parsedCh <-chan inputParsed, WaitGroup *sync.WaitGroup) {
 	inputCH := make(chan string, channelBufferSize)
 	outputCH := make(chan inputParsed, channelBufferSize)
 
-	go func() {
-		for i := 0; i < workersParse; i++ {
-			go workerParse(inputCH, outputCH)
-		}
-	}()
+	for i := 0; i < workersParse; i++ {
+		go workerParse(inputCH, outputCH)
+	}
 
 	go func() {
 		for _, line := range lines {
@@ -44,60 +57,6 @@ func parse() (parsedCh <-chan inputParsed, WaitGroup *sync.WaitGroup) {
 	}()
 
 	return outputCH, &wg
-}
-
-func workerParse(in <-chan string, out chan<- inputParsed) {
-	for v := range in {
-		out <- procesParse(v)
-	}
-}
-
-func procesParse(line string) inputParsed {
-	min, _ := strconv.Atoi(strings.Split(strings.Split(line, ":")[0], "-")[0])
-	max, _ := strconv.Atoi(strings.Split(strings.Split(strings.Split(line, ":")[0], "-")[1], " ")[0])
-	charactere := []rune(strings.Split(strings.Split(line, ":")[0], " ")[1])[0]
-	text := strings.Split(line, ": ")[1]
-	return inputParsed{min: min, max: max, charactere: charactere, text: text}
-}
-
-func main() {
-
-	part1()
-	part2()
-}
-
-func part1() {
-	items, wg := parse()
-	result := process(items, wg, workerPart1)
-	fmt.Println("Part1: ", result)
-
-}
-func part2() {
-	items, wg := parse()
-	result := process(items, wg, workerPart2)
-	fmt.Println("Part2: ", result)
-}
-func process(inputParsedChn <-chan inputParsed, wg *sync.WaitGroup, workerFn func(inChchan <-chan inputParsed, outCh chan<- bool, wg *sync.WaitGroup)) int {
-	finalOutputCH := make(chan bool, channelBufferSize)
-
-	go func() {
-		for i := 0; i < workersProcessing; i++ {
-			go workerFn(inputParsedChn, finalOutputCH, wg)
-		}
-	}()
-
-	go func() {
-		wg.Wait()
-		close(finalOutputCH)
-	}()
-
-	var counter int
-	for boolResult := range finalOutputCH {
-		if boolResult {
-			counter++
-		}
-	}
-	return counter
 }
 
 func workerPart1(in <-chan inputParsed, out chan<- bool, wg *sync.WaitGroup) {
@@ -131,6 +90,9 @@ func calculatePart1(input inputParsed) bool {
 }
 
 func calculatePart2(input inputParsed) bool {
+	if input.min-1 < 0 || input.max-1 > len(input.text) {
+		return false
+	}
 	first := []rune(input.text)[input.min-1]
 	second := []rune(input.text)[input.max-1]
 
@@ -138,4 +100,42 @@ func calculatePart2(input inputParsed) bool {
 		return true
 	}
 	return false
+}
+
+func process(inputParsedChn <-chan inputParsed, wg *sync.WaitGroup, workerFn func(inChchan <-chan inputParsed, outCh chan<- bool, wg *sync.WaitGroup)) int {
+	finalOutputCH := make(chan bool, channelBufferSize)
+
+	for i := 0; i < workersProcessing; i++ {
+		go workerFn(inputParsedChn, finalOutputCH, wg)
+	}
+
+	go func() {
+		wg.Wait()
+		close(finalOutputCH)
+	}()
+
+	var counter int
+	for boolResult := range finalOutputCH {
+		if boolResult {
+			counter++
+		}
+	}
+	return counter
+}
+
+func part1() {
+	items, wg := parse()
+	result := process(items, wg, workerPart1)
+	fmt.Println("Part1: ", result)
+
+}
+func part2() {
+	items, wg := parse()
+	result := process(items, wg, workerPart2)
+	fmt.Println("Part2: ", result)
+}
+
+func main() {
+	part1()
+	part2()
 }
