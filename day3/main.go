@@ -27,26 +27,20 @@ func process(lines []string, right, down int) int {
 	textLength := len(arr[0].characteres)
 	currentColumn := 0
 	// arr[0].resultPartStr = arr[0].characteres
+	var counter int
 	for i := 0; i < len(lines)-down; i = i + down {
 		currentColumn += right
 		arr[i+down].columnCount = currentColumn
 		arr[i+down].iteration = int(currentColumn / textLength)
 
-		if rune(arr[i+down].characteres[currentColumn-arr[i+down].iteration*textLength]) == rune('#') {
+		if arr[i+down].characteres[currentColumn-arr[i+down].iteration*textLength] == '#' {
 			// arr[i+down].resultPartStr = string(arr[i+down].characteres[:currentColumn-arr[i+down].iteration*textLength]) + "X" + string(arr[i+down].characteres[currentColumn-arr[i+down].iteration*textLength+down:])
 			arr[i+down].hasTree = true
+			counter++
 			continue
 		}
 		// arr[i+down].resultPartStr = string(arr[i+down].characteres[:currentColumn-arr[i+down].iteration*textLength]) + "O" + string(arr[i+down].characteres[currentColumn-arr[i+down].iteration*textLength+down:])
 		arr[i+down].hasTree = false
-	}
-
-	var counter int
-	for _, v := range arr {
-		// fmt.Printf("%+v\n", v)
-		if v.hasTree {
-			counter++
-		}
 	}
 
 	return counter
