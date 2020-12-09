@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"io/ioutil"
+	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -136,6 +137,17 @@ func part2() {
 }
 
 func main() {
-	part1()
-	part2()
+	pat := regexp.MustCompile("([0-9]+)-([0-9]+) ([a-z]): ([a-z]+)")
+	matches := pat.FindStringSubmatch("1-7 j: vrfjljjwbsv")
+	// mincount, _ := strconv.Atoi(matches[1])
+	// maxcount, _ := strconv.Atoi(matches[2])
+	fmt.Println(matches[0])
+	fmt.Println(matches[1])
+	fmt.Println(matches[2])
+	fmt.Println(matches[3])
+
+	fmt.Println(matches)
+
+	// part1()
+	// part2()
 }
