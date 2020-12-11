@@ -1,9 +1,11 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
+	"regexp"
 	"strconv"
 	"strings"
 )
@@ -13,22 +15,22 @@ type instuction struct {
 	arg int
 }
 
-func parse() []*instuction {
+func parse() []instuction {
 
 	f, _ := os.Open("input.txt")
 
 	bytes, _ := ioutil.ReadAll(f)
 
-	items := make([]*instuction, 0)
+	items := make([]instuction, 0)
 	for _, v := range strings.Split(string(bytes), "\n") {
-		splits := strings.Split(v, " ")
-		op := splits[0]
-		n, _ := strconv.Atoi(splits[1])
-		items = append(items, &instuction{op: op, arg: n})
+		re := regexp.MustCompile(`(nop|acc|jmp)\s([+-]\d+)`)
+		ret := re.FindStringSubmatch(v)
+		n, _ := strconv.Atoi(ret[2])
+		items = append(items, instuction{op: ret[1], arg: n})
 	}
 	return items
 }
-func result1(instructions []*instuction) (acumulator int, halt bool) {
+func result1(instructions []instuction) (acumulator int, halt error) {
 	currentLine := 0
 	accumulator := 0
 	visited := make(map[int]struct{}, 0)
@@ -38,42 +40,43 @@ func result1(instructions []*instuction) (acumulator int, halt bool) {
 		}
 		ins := instructions[currentLine]
 		if _, ok := visited[currentLine]; ok {
-			return accumulator, true
+			return accumulator, errors.New("halt")
 		}
 		visited[currentLine] = struct{}{}
 
-		if ins.op == "nop" {
-			currentLine++
-			continue
+		switch ins.op {
+		case "nop":
+			{
+				currentLine++
+			}
+		case "acc":
+			{
+				currentLine++
+				accumulator += ins.arg
+			}
+		case "jmp":
+			{
+				currentLine = currentLine + ins.arg
+			}
 		}
-		if ins.op == "acc" {
-			currentLine++
-			accumulator += ins.arg
-			continue
-		}
-		if ins.op == "jmp" {
-			currentLine = currentLine + ins.arg
-			continue
-		}
-
 	}
-	return accumulator, false
+	return accumulator, nil
 }
 
-func result2(instructions []*instuction) int {
+func result2(instructions []instuction) int {
 	for i := len(instructions) - 1; i >= 0; i-- {
 		if instructions[i].op == "nop" || instructions[i].op == "jmp" {
-			originalCopy := *instructions[i]
+			originalCopy := instructions[i]
 			if instructions[i].op == "nop" {
 				instructions[i].op = "jmp"
 			} else {
 				instructions[i].op = "nop"
 			}
-			result, halt := result1(instructions)
-			if !halt {
+			result, haltError := result1(instructions)
+			if haltError == nil {
 				return result
 			}
-			instructions[i] = &originalCopy
+			instructions[i] = originalCopy
 		}
 	}
 	panic("all combinations halt")
